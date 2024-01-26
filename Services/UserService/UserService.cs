@@ -1,6 +1,7 @@
 using CRUD_API_Assignment.Models;
 using System.Threading.Tasks;
 using System.Linq;
+using  Microsoft.Extensions.Configuration;
 
 namespace CRUD_API_Assignment.Services.UserService
 {
@@ -8,9 +9,11 @@ namespace CRUD_API_Assignment.Services.UserService
     {
         private readonly IMapper _mapper;
         private readonly DataContext _dataContext;
+        private readonly IConfiguration _configuration;
 
-        public UserService(IMapper mapper, DataContext dataContext)
+        public UserService(IMapper mapper, DataContext dataContext, IConfiguration configuration)
         {
+            _configuration = configuration;
             _mapper = mapper;
             _dataContext = dataContext;
         }
@@ -201,7 +204,7 @@ namespace CRUD_API_Assignment.Services.UserService
 
             else
             {
-                serviceResponse.Data=user.Id;
+                serviceResponse.Data=CreateToken(user);
             }
             return serviceResponse;
         }
@@ -235,6 +238,38 @@ namespace CRUD_API_Assignment.Services.UserService
                 var computedHash=hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
                 return computedHash.SequenceEqual(passwordHash);
             }
+        }
+
+        private string CreateToken(User user)
+        {
+            var claims=new List<Claim>()
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Name,user.UserName)
+            };
+
+            var appsettingsToken=_configuration.GetSection("AppSettings:Token").Value;
+            if(appsettingsToken is null)
+            {
+                throw new Exception("appsettings token is empty");
+            }
+
+            SymmetricSecurityKey key=new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(appsettingsToken));
+            SigningCredentials cred=new SigningCredentials(key,SecurityAlgorithms.HmacSha512Signature);
+
+            var tokenDescriptor=new SecurityTokenDescriptor()
+            {
+                Subject=new ClaimsIdentity(claims),
+                Expires=DateTime.Now.AddDays(1),
+                SigningCredentials=cred
+            };
+
+
+            JwtSecurityTokenHandler tokenhandler=new JwtSecurityTokenHandler();
+            SecurityToken token=tokenhandler.CreateToken(tokenDescriptor);
+
+            return tokenhandler.WriteToken(token);
+
         }
         
     }

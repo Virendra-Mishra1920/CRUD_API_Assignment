@@ -2,13 +2,16 @@ using CRUD_API_Assignment.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 
 using CRUD_API_Assignment.Services.UserService;
 
 namespace CRUD_API_Assignment.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
+    
     public class UserController:ControllerBase
     {
         private readonly IUserService _userService;
@@ -37,6 +40,7 @@ namespace CRUD_API_Assignment.Controllers
             return Ok(response);
         }
 
+        
         [HttpPost("AddUser")]
         public async Task<ActionResult<ServiceResponse<string>>> AddUser(AddUserResquestDto user)
         {
@@ -48,6 +52,7 @@ namespace CRUD_API_Assignment.Controllers
 
         }
 
+        [AllowAnonymous] 
         [HttpPost("Login")]
         public async Task<ActionResult<ServiceResponse<string>>> Login(UserLoginRequestDto request)
         {
@@ -55,17 +60,13 @@ namespace CRUD_API_Assignment.Controllers
             return BadRequest("Invalid user details");
 
             var response=await _userService.Login(request.UserName,request.Password);
+            if(response.Success==false)
+            return NotFound(response);
             return Ok(response);
 
         }
 
-        //  [HttpGet("{id}")]
-        // private async Task<ActionResult<ServiceResponse< GetUserResponseDto>>> Create(string? id)
-        // {
-        //     return await _userService.GetUserById(id);
-        // }
-
-    
+       
        [HttpPut]
         public async Task<ActionResult<ServiceResponse<GetUserResponseDto>>> UpdateUser(UpdateUserRequestDto updatedUser)
         {
@@ -77,6 +78,7 @@ namespace CRUD_API_Assignment.Controllers
             return Ok(response);
         }
 
+        
         [HttpDelete()]
 
         public async Task<ActionResult<ServiceResponse<List<GetUserResponseDto>>>> DeleteUser(string id=null)
