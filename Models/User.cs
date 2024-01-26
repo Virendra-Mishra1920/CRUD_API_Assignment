@@ -10,8 +10,9 @@ namespace CRUD_API_Assignment.Models
         [Required]
         public string? UserName { get; set; }
 
-        [Required]
-        public string? Password { get; set; }
+        public byte[] PasswordHash { get; set; }=new byte[0];
+        
+        public byte[] PasswordSalt { get; set; }=new byte[0];
 
         public bool isAdmin { get; set; }
 
@@ -20,5 +21,7 @@ namespace CRUD_API_Assignment.Models
 
         [Required]
         public List<Hobby>? Hobbies { get; set; }
+
+       
     }
 }

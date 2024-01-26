@@ -6,9 +6,11 @@ namespace CRUD_API_Assignment.Services.UserService
     {
         Task<ServiceResponse<List<GetUserResponseDto>>> GetAllUsers();
         Task<ServiceResponse<GetUserResponseDto>> GetUserById(string id);
-        Task<ServiceResponse<List<GetUserResponseDto>>> AddUser(AddUserResquestDto user);
+        Task<ServiceResponse<string>> AddUser(AddUserResquestDto user, string password);
         Task<ServiceResponse<GetUserResponseDto>> UpdateUser(UpdateUserRequestDto updatedUser);
-        Task<ServiceResponse<List<GetUserResponseDto>>> DeleteUser(string id);
+        Task<ServiceResponse<GetUserResponseDto>> DeleteUser(string id);
+        Task<bool> IsUserAlreadyExist(string username);
+        Task<ServiceResponse<string>> Login(string userName, string password);
          
     }
 }

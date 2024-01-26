@@ -50,12 +50,24 @@ namespace CRUD_API_Assignment.Services.UserService
 
         }
 
-        public async Task<ServiceResponse< List<GetUserResponseDto>>> AddUser(AddUserResquestDto newuser)
+        public async Task<ServiceResponse<string>> AddUser(AddUserResquestDto newuser, string password)
         {
-             var serviceResponse=new ServiceResponse<List<GetUserResponseDto>>();
-             var user=_mapper.Map<User>(newuser);
+            var serviceResponse=new ServiceResponse<string>();
+            if(await IsUserAlreadyExist(newuser.UserName))
+            {
+                serviceResponse.Success=false;
+                serviceResponse.Message=$"User already exist by name {newuser.UserName}";
+                return serviceResponse;
+
+            }
+            CreateHashPassword(password, out byte[] passwordHash, out byte[] passwordSalt);
+
+            var user=_mapper.Map<User>(newuser);
              user.Id=Guid.NewGuid().ToString();
-             
+
+            user.PasswordHash=passwordHash;
+            user.PasswordSalt=passwordSalt;
+
              _dataContext.Users.Add(user);
              await _dataContext.SaveChangesAsync();
              foreach(var hobby in newuser.Hobbies)
@@ -65,7 +77,8 @@ namespace CRUD_API_Assignment.Services.UserService
                 await _dataContext.SaveChangesAsync();
              }
 
-             serviceResponse.Data=_dataContext.Users.Select(u=>_mapper.Map<GetUserResponseDto>(u)).ToList();
+             serviceResponse.Data=user.Id;
+
             return serviceResponse;
         }
 
@@ -80,7 +93,7 @@ namespace CRUD_API_Assignment.Services.UserService
                     throw new Exception($"User with Id '{updatedUser.Id}' not found");
                 }
                 user.UserName=updatedUser.UserName;
-                user.Password=updatedUser.Password;
+               // user.Password=updatedUser.Password;
                 user.Age=updatedUser.Age;
                 user.isAdmin=updatedUser.isAdmin;
                  await _dataContext.SaveChangesAsync();
@@ -126,9 +139,9 @@ namespace CRUD_API_Assignment.Services.UserService
 
         }
 
-        public async Task<ServiceResponse<List<GetUserResponseDto>>> DeleteUser(string id)
+        public async Task<ServiceResponse<GetUserResponseDto>> DeleteUser(string id)
         {
-             var serviceResponse=new ServiceResponse<List<GetUserResponseDto>>();
+             var serviceResponse=new ServiceResponse<GetUserResponseDto>();
             try
             {
                 var user=await _dataContext.Users.FirstOrDefaultAsync(u=>u.Id==id);
@@ -153,7 +166,7 @@ namespace CRUD_API_Assignment.Services.UserService
                _dataContext.Users.Remove(user);
                await _dataContext.SaveChangesAsync();
 
-               serviceResponse.Data=await _dataContext.Users.Select(u=>_mapper.Map<GetUserResponseDto>(u)).ToListAsync();
+                serviceResponse.Data=_mapper.Map<GetUserResponseDto>(user);
                serviceResponse.Message=$"User delete successfully with Id {id}";
 
             }
@@ -166,6 +179,62 @@ namespace CRUD_API_Assignment.Services.UserService
            
             return serviceResponse;
 
+        }
+
+        public async Task<ServiceResponse<string>> Login(string userName, string password)
+        {
+            var serviceResponse=new ServiceResponse<string>();
+            var user=await _dataContext.Users.FirstOrDefaultAsync(u=>u.UserName.ToLower()==userName);
+            if(user is null)
+            {
+                serviceResponse.Success=false;
+                serviceResponse.Message=$"user '{userName}' not found";
+                return serviceResponse;
+            }
+
+            else if(!VerifyPassword(password,user.PasswordHash,user.PasswordSalt))
+            {
+                serviceResponse.Success=false;
+                serviceResponse.Message=$"Invalid Password";
+                return serviceResponse;
+            }
+
+            else
+            {
+                serviceResponse.Data=user.Id;
+            }
+            return serviceResponse;
+        }
+
+        public async Task< bool> IsUserAlreadyExist(string username)
+        {
+            if(await _dataContext.Users.AnyAsync(u=>u.UserName.ToLower()==username))
+            {
+                return true;
+            }
+
+            return false;
+
+        }
+
+        public void CreateHashPassword(string password, out byte[] passwordHash, out byte[] passwordSalt)
+        {
+            using(var hmac=new System.Security.Cryptography.HMACSHA512())
+            {
+                passwordSalt=hmac.Key;
+                passwordHash=hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+
+
+            }
+        }
+
+        private bool VerifyPassword(string password, byte[] passwordHash, byte[] passwordSalt)
+        {
+            using(var hmac=new System.Security.Cryptography.HMACSHA512(passwordSalt))
+            {
+                var computedHash=hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+                return computedHash.SequenceEqual(passwordHash);
+            }
         }
         
     }
