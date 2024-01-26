@@ -32,7 +32,6 @@ builder.Services.AddSwaggerGen(c=>{
         });
 
         c.OperationFilter<SecurityRequirementsOperationFilter>();
-        //c.SwaggerDoc("v1", new OpenApiInfo { Version = "1.0", Title = "My API" });
 
 });
 builder.Services.AddAutoMapper(typeof(Program).Assembly);

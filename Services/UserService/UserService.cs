@@ -245,8 +245,18 @@ namespace CRUD_API_Assignment.Services.UserService
             var claims=new List<Claim>()
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name,user.UserName)
+                new Claim(ClaimTypes.Name,user.UserName),
+                
             };
+
+            var userRoles=_dataContext.UserRoles.Where(u=>u.UserId==user.Id);
+            var roleIds=userRoles.Select(x=>x.RoleId).ToList();
+            var roles=_dataContext.Roles.Where(r=>roleIds.Contains(r.Id)).ToList();
+            foreach(var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role,role.Name));
+            }
+
 
             var appsettingsToken=_configuration.GetSection("AppSettings:Token").Value;
             if(appsettingsToken is null)
@@ -269,6 +279,56 @@ namespace CRUD_API_Assignment.Services.UserService
             SecurityToken token=tokenhandler.CreateToken(tokenDescriptor);
 
             return tokenhandler.WriteToken(token);
+
+        }
+
+        public async Task<ServiceResponse<Role>> AddRole(Role role)
+        {
+            var serviceResponse=new ServiceResponse<Role>();
+            var data=await _dataContext.Roles.AddAsync(role);
+            await _dataContext.SaveChangesAsync();
+            //serviceResponse.Data=data.Entity;
+            return serviceResponse;
+
+        }
+
+        public async Task<ServiceResponse<bool>> AssignRoleToUser(AddUserRole obj)
+        {
+            var serviceResponse=new ServiceResponse<bool>();
+            try
+            {
+                    var userRoles=new List<UserRole>();
+                    var user=_dataContext.Users.FirstOrDefault(u=>u.Id==obj.UserId);
+                    if(user is null)
+                    {
+                        serviceResponse.Success=false;
+                        serviceResponse.Message=$"User not found with Id {obj.UserId}";
+                        return serviceResponse;
+
+                    }
+
+                    foreach(int roleId in obj.RoleIds)
+                    {
+                        var _userRole=new UserRole();
+                        _userRole.RoleId=roleId;
+                        _userRole.UserId=user.Id;
+                        userRoles.Add(_userRole);
+                    }
+
+                    await _dataContext.UserRoles.AddRangeAsync(userRoles);
+                    await _dataContext.SaveChangesAsync();
+                    serviceResponse.Data=true;
+                
+            }
+            catch (System.Exception ex)
+            {
+                serviceResponse.Data=false;
+                serviceResponse.Success=false;
+                serviceResponse.Message=ex.Message;
+
+            }
+           
+            return serviceResponse;
 
         }
         

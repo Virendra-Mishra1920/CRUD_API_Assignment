@@ -11,6 +11,8 @@ namespace CRUD_API_Assignment.Services.UserService
         Task<ServiceResponse<GetUserResponseDto>> DeleteUser(string id);
         Task<bool> IsUserAlreadyExist(string username);
         Task<ServiceResponse<string>> Login(string userName, string password);
+        Task<ServiceResponse<Role>> AddRole(Role role);
+        Task<ServiceResponse<bool>> AssignRoleToUser(AddUserRole obj);
          
     }
 }

@@ -8,7 +8,7 @@ using CRUD_API_Assignment.Services.UserService;
 
 namespace CRUD_API_Assignment.Controllers
 {
-    [Authorize]
+    
     [ApiController]
     [Route("api/[controller]")]
     
@@ -23,13 +23,13 @@ namespace CRUD_API_Assignment.Controllers
             
         }
 
-        [HttpGet("GetAllUsers")]
+        [HttpGet("GetAllUsers"), Authorize(Roles="Admin")]
         public async Task< ActionResult<ServiceResponse<List<GetUserResponseDto>>>> GetUsers()
         {
             return Ok( await _userService.GetAllUsers());
         }
 
-        [HttpGet()]
+        [HttpGet("GetUserById")]
         public async Task<ActionResult<ServiceResponse< GetUserResponseDto>>> GetUserById(string id=null)
         {
             if(string.IsNullOrEmpty(id))
@@ -41,7 +41,7 @@ namespace CRUD_API_Assignment.Controllers
         }
 
         
-        [HttpPost("AddUser")]
+        [HttpPost("AddUser"), Authorize]
         public async Task<ActionResult<ServiceResponse<string>>> AddUser(AddUserResquestDto user)
         {
             if(string.IsNullOrEmpty(user.UserName) || string.IsNullOrEmpty(user.Password)  || user.Age==0 || user.Hobbies.Count<0  )
@@ -51,6 +51,29 @@ namespace CRUD_API_Assignment.Controllers
             return Ok(response);
 
         }
+
+        [HttpPost("AddRole"), Authorize(Roles="Admin")]
+        public async Task<ActionResult<ServiceResponse<Role>>> AddRole(Role role)
+        {
+            if(string.IsNullOrEmpty(role.Name) )
+            return BadRequest("Invalid user details");
+
+            var response=await _userService.AddRole(role);
+            return Ok(response);
+
+        }
+
+          [HttpPost("AssignRoleToUser"), Authorize(Roles="Admin")]
+        public async Task<ActionResult<ServiceResponse<Role>>> AssignRoleToUser(AddUserRole obj)
+        {
+            if(string.IsNullOrEmpty(obj.UserId) || obj.RoleIds.Count<0 )
+            return BadRequest("Invalid user details");
+
+            var response=await _userService.AssignRoleToUser(obj);
+            return Ok(response);
+
+        }
+
 
         [AllowAnonymous] 
         [HttpPost("Login")]
@@ -67,7 +90,7 @@ namespace CRUD_API_Assignment.Controllers
         }
 
        
-       [HttpPut]
+       [HttpPut, Authorize]
         public async Task<ActionResult<ServiceResponse<GetUserResponseDto>>> UpdateUser(UpdateUserRequestDto updatedUser)
         {
             var response=await _userService.UpdateUser(updatedUser);
@@ -79,7 +102,7 @@ namespace CRUD_API_Assignment.Controllers
         }
 
         
-        [HttpDelete()]
+        [HttpDelete(), Authorize(Roles="Admin")]
 
         public async Task<ActionResult<ServiceResponse<List<GetUserResponseDto>>>> DeleteUser(string id=null)
         {
