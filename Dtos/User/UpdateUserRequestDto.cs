@@ -12,7 +12,7 @@ namespace CRUD_API_Assignment.Dtos.User
 
         public int Age { get; set; }
 
-        public List<AddHobbyRequestDto>? Hobbies{get;set;}
+        public List<string>? Hobbies{get;set;}=new List<string>();
         
     }
 }

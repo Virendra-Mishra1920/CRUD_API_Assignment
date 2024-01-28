@@ -4,3 +4,5 @@
 /.vscode
 /Migrations
 /appsettings.Development.json
+/.vs
+/users.pdf

@@ -19,9 +19,5 @@ namespace CRUD_API_Assignment.Models
         [Required]
         public int Age { get; set; }
 
-        [Required]
-        public List<Hobby>? Hobbies { get; set; }
-
-       
     }
 }

@@ -22,6 +22,26 @@ namespace CRUD_API_Assignment.Services.UserService
         {
             var serviceResponse=new ServiceResponse<List<GetUserResponseDto>>();
             serviceResponse.Data=_dataContext.Users.Select(u=>_mapper.Map<GetUserResponseDto>(u)).ToList();
+
+            List<GetUserResponseDto> getUserResponseDtos = new List<GetUserResponseDto>();
+            var ids = new List<string>();
+            var names = new List<string>();
+
+            foreach (var item in serviceResponse.Data)
+            {
+                var userResponse = new GetUserResponseDto();
+                userResponse.Id = item.Id;
+                userResponse.UserName = item.UserName;
+                userResponse.Age = item.Age;
+                userResponse.isAdmin = item.isAdmin;
+                var hobbies = _dataContext.UserHobbies.Where(x => x.UserId == item.Id).Select(x => x.HobbyName).ToList();
+                if(hobbies.Count>0)
+                userResponse!.Hobbies!.AddRange(hobbies!);
+                getUserResponseDtos.Add(userResponse) ;
+            }
+
+            serviceResponse.Data = getUserResponseDtos;
+
             return serviceResponse;
 
         }
@@ -41,6 +61,15 @@ namespace CRUD_API_Assignment.Services.UserService
                 }
                 
                 serviceResponse.Data=_mapper.Map<GetUserResponseDto>(user);
+                var userResponse = new GetUserResponseDto();
+                userResponse.Id = user.Id;
+                userResponse.Age = user.Age;
+                userResponse.UserName = user.UserName;
+                userResponse.isAdmin=user.isAdmin;
+                var hobbies = _dataContext.UserHobbies.Where(u=>u.UserId==user.Id).Select(x=>x.HobbyName).ToList();
+                if(hobbies.Count>0)
+                userResponse.Hobbies!.AddRange(hobbies!);
+                serviceResponse.Data = userResponse;
                 
             }
             catch (System.Exception ex)
@@ -56,7 +85,7 @@ namespace CRUD_API_Assignment.Services.UserService
         public async Task<ServiceResponse<string>> AddUser(AddUserResquestDto newuser, string password)
         {
             var serviceResponse=new ServiceResponse<string>();
-            if(await IsUserAlreadyExist(newuser.UserName))
+            if(await IsUserAlreadyExist(newuser.UserName!))
             {
                 serviceResponse.Success=false;
                 serviceResponse.Message=$"User already exist by name {newuser.UserName}";
@@ -71,14 +100,22 @@ namespace CRUD_API_Assignment.Services.UserService
             user.PasswordHash=passwordHash;
             user.PasswordSalt=passwordSalt;
 
-             _dataContext.Users.Add(user);
-             await _dataContext.SaveChangesAsync();
-             foreach(var hobby in newuser.Hobbies)
-             {
-                var hb=_mapper.Map<Hobby>(hobby);
-                await _dataContext.Hobbies.AddAsync(hb);
-                await _dataContext.SaveChangesAsync();
-             }
+            var hobbies = new List<UserHobby>();
+            
+            _dataContext.Users.Add(user);
+            await _dataContext.SaveChangesAsync();
+
+            foreach (string hobby in newuser.Hobbies!)
+            {
+                var uby = new UserHobby();
+                uby.HobbyName=hobby;
+                uby.UserId = user.Id;
+                _dataContext.UserHobbies.Add(uby);
+
+            }
+
+            _dataContext.SaveChanges();
+
 
              serviceResponse.Data=user.Id;
 
@@ -96,39 +133,43 @@ namespace CRUD_API_Assignment.Services.UserService
                     throw new Exception($"User with Id '{updatedUser.Id}' not found");
                 }
                 user.UserName=updatedUser.UserName;
-               // user.Password=updatedUser.Password;
                 user.Age=updatedUser.Age;
                 user.isAdmin=updatedUser.isAdmin;
-                 await _dataContext.SaveChangesAsync();
-                 //var hb=_mapper.Map<Hobby>(updatedUser.Hobbies);
-                 List<string> hobbies=new List<string>();
 
-                var hbs=await _dataContext.Hobbies.Where(u=>u.UserId==user.Id).ToListAsync();
-                if(updatedUser.Hobbies.Count>0)
+                if (updatedUser.Hobbies!.Count > 0)
                 {
-                    foreach (var updatedhobby in updatedUser.Hobbies)
+                    foreach (string hobby in updatedUser.Hobbies!)
                     {
-                        if(hbs.Count>0)
+                        var _user = await _dataContext.UserHobbies.FirstOrDefaultAsync(x => x.UserId == updatedUser.Id);
+                        if (_user != null)
                         {
-                            foreach(var item in hbs)
-                           {
-                               if( !hobbies.Contains(item.Name))
-                               {
-                                 hobbies.Add(item.Name);
-                                 item.Name=updatedhobby.Name;
-                               }
-                           }
-                           
-                           await _dataContext.SaveChangesAsync();
-
+                            _user.HobbyName = hobby;
                         }
-                        
-                    }
-                     
-                }
-               
 
-               serviceResponse.Data=_mapper.Map<GetUserResponseDto>(user);
+                    }
+
+                    await _dataContext.SaveChangesAsync();
+
+
+                }
+
+
+
+                
+
+
+                await _dataContext.SaveChangesAsync();
+
+                var hobbies = _dataContext.UserHobbies.Where(x => x.UserId == user.Id).Select(x => x.HobbyName).ToList();
+
+                var getUserResponseDto = new GetUserResponseDto();
+                getUserResponseDto.UserName = user.UserName;
+                getUserResponseDto.Id = user.Id;
+                getUserResponseDto.isAdmin = user.isAdmin;
+                if (hobbies.Count > 0)
+                    getUserResponseDto.Hobbies!.AddRange(hobbies!);
+
+                serviceResponse.Data = getUserResponseDto;
                 
             }
             catch (System.Exception ex )
@@ -153,18 +194,6 @@ namespace CRUD_API_Assignment.Services.UserService
                     throw new Exception($"User with Id '{id}' not found");
                 }
 
-                var hbs=await _dataContext.Hobbies.Where(u=>u.UserId==id).ToListAsync();
-                if(hbs.Count>0)
-                {
-                    foreach(var item in hbs)
-                   {
-                    _dataContext.Hobbies.Remove(item);
-                   }
-                   await _dataContext.SaveChangesAsync();
-
-                }
-                
-                
 
                _dataContext.Users.Remove(user);
                await _dataContext.SaveChangesAsync();
